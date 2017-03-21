@@ -1,33 +1,29 @@
-//int coilOutPin = 10;
-//int pulsePin = 7;
-
 #define COIL_OUT_PIN      10
 #define PULSE_SELECT_PIN  7
 #define BATTERY_MID       A0
 #define DEFAULT_LED       13
 
-//#define COIL_DETECT_PIN  
-// Baby Beast
-#define COIL_POWER        50
-//TFV12 Low
-//#define COIL_POWER        150
-//TFV12 High
-//#define COIL_POWER        200
+double adcBitValue = 0.0048875;
+double batteryVoltage = 0;
+double batteryMinVoltage = 3.2;
+int batteryLedBlinkOn = 500;
+int batteryLedBlinkOff = 500;
 
-// Baby Beast Pulse
-#define MAX_PULSE         50
-#define MIN_PULSE         10
-
-// TFV12 Pulse
-//#define MAX_PULSE         150
-//#define MIN_PULSE         75
-
-int coilPwm = 0;
+/*************************  BABY BEAST SETTINGS  *************************/
+/*
+int coilPower = 50;
 int maxPulse = 60;
 int minPulse = 20;
 int pulseDelay = 5;
 int pulseSpacing = 5;
-double batteryVoltage = 0;
+*/
+
+/***************************  TFV12 SETTINGS  ***************************/
+int coilPower = 200;
+int maxPulse = 150;
+int minPulse = 75;
+int pulseDelay = 4;
+int pulseSpacing = 4;
 
 void setup() {
   pinMode(COIL_OUT_PIN, OUTPUT);
@@ -39,31 +35,58 @@ void setup() {
   Serial.begin(9600);
 }
 
-void loop() {
-  batteryVoltage = analogRead(BATTERY_MID) * 0.0048875;
-  
-  if((batteryVoltage >= 3.2))
+void loop() {  
+  if(isBatteryDead())
   {
-    int pulsePinValue = digitalRead(PULSE_SELECT_PIN);
-    if(pulsePinValue == 0) {
-      analogWrite(COIL_OUT_PIN, COIL_POWER);
-    } else {
-      pulse();
-    }
+    blinkDefaultLed();
   }
   else
   {
-    blinkDefaultLed();
+    fireCoil();
   }
 
   // TESTING
   //Serial.println(batteryVoltage);
 }
 
-void pulse() {
+boolean isBatteryDead() {
+  batteryVoltage = analogRead(BATTERY_MID) * adcBitValue;
+
+  if(batteryVoltage < batteryMinVoltage) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+void fireCoil() {
+  if(isPulseSelected()) {
+    pulseCoil();
+  }
+  else {
+    steadyCoil();
+  }
+}
+
+void steadyCoil() {
+  analogWrite(COIL_OUT_PIN, coilPower);
+}
+
+void pulseCoil() {
   countUp();
   countDown();
   delay(pulseSpacing);
+}
+
+boolean isPulseSelected() {
+  int pulsePinValue = digitalRead(PULSE_SELECT_PIN);
+  if(pulsePinValue == 0) {
+    return false;
+  }
+  else {
+    return true;
+  }
 }
 
 void countUp()
@@ -89,7 +112,7 @@ void countDown()
 void blinkDefaultLed()
 {
   digitalWrite(DEFAULT_LED, HIGH);
-  delay(500);
+  delay(batteryLedBlinkOn);
   digitalWrite(DEFAULT_LED, LOW);
-  delay(500);
+  delay(batteryLedBlinkOff);
 }
